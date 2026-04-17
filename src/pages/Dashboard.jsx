@@ -55,16 +55,19 @@ export default function Dashboard() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [dem, dispo, cons] = await Promise.all([
+      // Promise.allSettled : un échec partiel n'empêche pas les autres de charger
+      const [demRes, dispoRes, consRes] = await Promise.allSettled([
         demandesAPI.getAll({ statut: 'ouverte' }),
         disponibilitesAPI.getAll(),
         consultantsAPI.getAll(),
       ])
-      setDemandes(dem || [])
-      setDisponibilites(dispo || [])
-      setConsultants(cons || [])
-    } catch (e) {
-      toast.error('Impossible de charger les données : ' + e.message)
+      if (demRes.status   === 'fulfilled') setDemandes(demRes.value || [])
+      if (dispoRes.status === 'fulfilled') setDisponibilites(dispoRes.value || [])
+      if (consRes.status  === 'fulfilled') setConsultants(consRes.value || [])
+      // Remonter l'erreur la plus critique uniquement
+      if (consRes.status === 'rejected') {
+        toast.error('Impossible de charger les consultants : ' + consRes.reason?.message)
+      }
     } finally {
       setLoading(false)
     }

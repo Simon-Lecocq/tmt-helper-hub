@@ -19,8 +19,9 @@ exports.handler = async (event) => {
         .order('date_debut', { ascending: true });
 
       if (!all) {
-        // Uniquement les actives dont la date de fin n'est pas dépassée
-        query = query.eq('est_active', true).gte('date_fin', today);
+        // Actives + (pas de date_fin OU date_fin >= aujourd'hui)
+        // Le .or() gère les anciennes lignes sans date_fin (rétrocompatibilité)
+        query = query.eq('est_active', true).or(`date_fin.is.null,date_fin.gte.${today}`);
       }
 
       const { data, error } = await query;
