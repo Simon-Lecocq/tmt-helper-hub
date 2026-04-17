@@ -13,7 +13,7 @@ const GRADE_COLORS = {
   'Consultant':         'bg-blue-100 text-blue-700',
   'Consultant Senior':  'bg-indigo-100 text-indigo-700',
   'Manager':            'bg-purple-100 text-purple-700',
-  'Partner':            'bg-gold-100 text-gold-700',
+  'Partner':            'bg-red-100 text-bp-red',
 }
 
 const EMPTY_FORM = { nom: '', email: '', grade: 'Consultant', is_admin: false }
@@ -116,7 +116,7 @@ export default function Admin() {
       {/* ── En-tête ─────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-navy-900">👥 Gestion de l'équipe</h1>
+          <h1 className="text-2xl font-bold text-bp-dark">👥 Gestion de l'équipe</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {actifs.length} membre{actifs.length > 1 ? 's' : ''} actif{actifs.length > 1 ? 's' : ''}
             {inactifs.length > 0 && ` · ${inactifs.length} inactif${inactifs.length > 1 ? 's' : ''}`}
@@ -149,7 +149,7 @@ export default function Admin() {
       ) : (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-navy-900">Membres actifs</h2>
+            <h2 className="font-semibold text-bp-dark">Membres actifs</h2>
             <span className="badge bg-emerald-100 text-emerald-700">{actifs.length}</span>
           </div>
           <div className="divide-y divide-gray-50">
@@ -213,11 +213,11 @@ export default function Admin() {
               {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-3 bg-gold-50 border border-gold-200 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
             <input
               type="checkbox"
               id="is_admin"
-              className="w-4 h-4 accent-navy-700"
+              className="w-4 h-4 accent-[#E3002B]"
               checked={form.is_admin}
               onChange={(e) => setForm({ ...form, is_admin: e.target.checked })}
             />
@@ -263,10 +263,10 @@ function ConsultantRow({ consultant: c, currentUser, onEdit, onToggle, onDelete 
   const isMe = currentUser?.id === c.id
 
   return (
-    <div className={`flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors ${isMe ? 'bg-navy-50/50' : ''}`}>
+    <div className={`flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors ${isMe ? 'bg-red-50/50' : ''}`}>
       {/* Avatar */}
       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-        c.statut === 'actif' ? 'bg-navy-100 text-navy-700' : 'bg-gray-100 text-gray-400'
+        c.statut === 'actif' ? 'bg-gray-100 text-gray-700' : 'bg-gray-100 text-gray-400'
       }`}>
         {ini}
       </div>
@@ -277,8 +277,8 @@ function ConsultantRow({ consultant: c, currentUser, onEdit, onToggle, onDelete 
           <span className={`font-semibold text-sm ${c.statut === 'inactif' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
             {c.nom}
           </span>
-          {isMe && <span className="badge bg-navy-100 text-navy-700 text-xs">Vous</span>}
-          {c.is_admin && <span className="badge bg-gold-100 text-gold-700 text-xs">⚙️ Admin</span>}
+          {isMe && <span className="badge bg-red-100 text-bp-red text-xs">Vous</span>}
+          {c.is_admin && <span className="badge bg-red-100 text-bp-red text-xs">⚙️ Admin</span>}
         </div>
         <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
           <span className={`badge ${gradeColor} text-xs`}>{c.grade}</span>
@@ -288,7 +288,7 @@ function ConsultantRow({ consultant: c, currentUser, onEdit, onToggle, onDelete 
 
       {/* Points + niveau */}
       <div className="hidden sm:block text-right shrink-0">
-        <div className="text-sm font-bold text-gold-600">{c.total_points || 0} pts</div>
+        <div className="text-sm font-bold text-bp-red">{c.total_points || 0} pts</div>
         <div className="text-xs text-gray-400">{level.emoji} {level.label}</div>
       </div>
 

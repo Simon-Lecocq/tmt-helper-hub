@@ -8,39 +8,74 @@ exports.handler = async (event) => {
   const id = event.queryStringParameters?.id;
 
   try {
-    // ── GET — liste des disponibilités actives ───────────────────────────
+    // ── GET ──────────────────────────────────────────────────────────────
     if (event.httpMethod === 'GET') {
       const all = event.queryStringParameters?.all === 'true';
+      const today = new Date().toISOString().split('T')[0];
+
       let query = supabase
         .from('disponibilites')
         .select(`*, consultant:consultants(id, nom, email, grade, total_points)`)
-        .order('created_at', { ascending: false });
-      if (!all) query = query.eq('est_active', true);
+        .order('date_debut', { ascending: true });
+
+      if (!all) {
+        // Uniquement les actives dont la date de fin n'est pas dépassée
+        query = query.eq('est_active', true).gte('date_fin', today);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
+
+      // Désactivation automatique des expirées (fire & forget)
+      supabase
+        .from('disponibilites')
+        .update({ est_active: false })
+        .eq('est_active', true)
+        .lt('date_fin', today)
+        .then(() => {})
+        .catch(() => {});
+
       return respond(200, data);
     }
 
     // ── POST — créer ou remplacer la disponibilité d'un consultant ───────
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}');
-      const { consultant_id, heures_disponibles_par_semaine, note } = body;
-      if (!consultant_id) return respond(400, { error: 'consultant_id obligatoire.' });
+      const {
+        consultant_id,
+        date_debut,
+        date_fin,
+        heures_par_jour,
+        note,
+        // rétrocompatibilité
+        heures_disponibles_par_semaine,
+      } = body;
 
-      // Désactiver les anciennes disponibilités de ce consultant
-      await supabase.from('disponibilites').update({ est_active: false }).eq('consultant_id', consultant_id);
+      if (!consultant_id) return respond(400, { error: 'consultant_id obligatoire.' });
+      if (!date_debut)    return respond(400, { error: 'date_debut obligatoire.' });
+      if (!date_fin)      return respond(400, { error: 'date_fin obligatoire.' });
+      if (date_fin < date_debut) return respond(400, { error: 'date_fin doit être après date_debut.' });
+
+      // Désactiver les disponibilités précédentes du consultant
+      await supabase
+        .from('disponibilites')
+        .update({ est_active: false })
+        .eq('consultant_id', consultant_id);
 
       const { data, error } = await supabase
         .from('disponibilites')
         .insert({
           consultant_id,
+          date_debut,
+          date_fin,
+          heures_par_jour:              heures_par_jour || 4,
           heures_disponibles_par_semaine: heures_disponibles_par_semaine || 0,
           note: note || '',
           est_active: true,
         })
         .select(`*, consultant:consultants(id, nom, email, grade, total_points)`)
         .single();
+
       if (error) throw error;
       return respond(201, data);
     }

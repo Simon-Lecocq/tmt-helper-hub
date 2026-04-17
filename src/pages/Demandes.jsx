@@ -168,7 +168,7 @@ export default function Demandes() {
       {/* ── En-tête ──────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-navy-900">📋 Demandes d'aide</h1>
+          <h1 className="text-2xl font-bold text-bp-dark">📋 Demandes d'aide</h1>
           <p className="text-sm text-gray-500 mt-0.5">{demandes.length} demande{demandes.length > 1 ? 's' : ''} affichée{demandes.length > 1 ? 's' : ''}</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary shrink-0">
@@ -267,7 +267,7 @@ export default function Demandes() {
             <div className="border border-gray-200 rounded-lg divide-y max-h-40 overflow-y-auto">
               {consultants.filter((c) => c.id !== form.demandeur_id).map((c) => (
                 <label key={c.id} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                  <input type="checkbox" className="rounded accent-navy-700"
+                  <input type="checkbox" className="rounded accent-[#E3002B]"
                     checked={form.consultants_notifies.includes(c.id)}
                     onChange={(e) => {
                       const ids = e.target.checked
@@ -279,7 +279,7 @@ export default function Demandes() {
                     <div className="text-sm font-medium">{c.nom}</div>
                     <div className="text-xs text-gray-500">{c.email}</div>
                   </div>
-                  {c.is_admin && <span className="ml-auto badge bg-gold-100 text-gold-700 text-xs">Admin</span>}
+                  {c.is_admin && <span className="ml-auto badge bg-red-100 text-bp-red text-xs">Admin</span>}
                 </label>
               ))}
             </div>
@@ -326,7 +326,7 @@ export default function Demandes() {
             <p className="text-sm text-gray-600">
               Demande : <strong>{completeDemande.titre}</strong>
             </p>
-            <div className="bg-gold-50 border border-gold-200 rounded-lg p-3 text-sm text-gold-800">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-bp-red">
               💡 Les heures créditées valent autant de points pour le helper (1 heure = 1 point).
             </div>
             <div>
@@ -406,7 +406,7 @@ function DemandeCard({ demande: d, currentUser, isAdmin, onAccept, onAssign, onC
             </button>
           )}
           {canComplete && (
-            <button onClick={onComplete} className="btn-gold text-xs px-3 py-1.5">
+            <button onClick={onComplete} className="btn-primary text-xs px-3 py-1.5">
               🏁 Terminer
             </button>
           )}

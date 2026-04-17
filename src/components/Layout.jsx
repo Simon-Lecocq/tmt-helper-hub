@@ -14,17 +14,13 @@ const STORAGE_KEY = 'tmthh_current_consultant_id'
 
 export default function Layout({ children }) {
   const [currentUser, setCurrentUser] = useState(null)
-  const [consultants, setConsultants] = useState([])
-  const [showPicker, setShowPicker] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [consultants, setConsultants]  = useState([])
+  const [showPicker, setShowPicker]    = useState(false)
+  const [mobileOpen, setMobileOpen]    = useState(false)
   const location = useLocation()
 
-  // Fermer le menu mobile à chaque changement de route
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
-
-  useEffect(() => {
-    loadConsultants()
-  }, [])
+  useEffect(() => { loadConsultants() }, [])
 
   async function loadConsultants() {
     try {
@@ -38,9 +34,7 @@ export default function Layout({ children }) {
       } else {
         setShowPicker(true)
       }
-    } catch {
-      // Pas de connexion Supabase – afficher quand même l'UI
-    }
+    } catch { /* pas de connexion — afficher l'UI quand même */ }
   }
 
   function selectUser(consultant) {
@@ -54,19 +48,26 @@ export default function Layout({ children }) {
     : '?'
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <header className="bg-navy-900 text-white shadow-lg sticky top-0 z-40">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+
+      {/* ── Header BearingPoint ─────────────────────────────────────── */}
+      <header className="bg-white shadow-sm sticky top-0 z-40">
+        {/* Barre rouge en haut — signature BearingPoint */}
+        <div className="h-1 bg-bp-red" />
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-15 py-3">
+
             {/* Logo */}
             <div className="flex items-center gap-3 shrink-0">
-              <div className="w-9 h-9 bg-gold-500 rounded-lg flex items-center justify-center font-bold text-navy-900 text-sm">
+              <div className="w-9 h-9 bg-bp-red rounded-md flex items-center justify-center font-bold text-white text-xs tracking-tight">
                 TMT
               </div>
               <div className="hidden sm:block">
-                <div className="font-bold text-base leading-tight tracking-wide">TMT Helper Hub</div>
-                <div className="text-navy-300 text-xs">BearingPoint</div>
+                <div className="font-bold text-base leading-tight text-bp-dark tracking-wide">
+                  TMT Helper Hub
+                </div>
+                <div className="text-gray-400 text-xs">BearingPoint</div>
               </div>
             </div>
 
@@ -80,8 +81,8 @@ export default function Layout({ children }) {
                   className={({ isActive }) =>
                     `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-white/15 text-white'
-                        : 'text-navy-200 hover:text-white hover:bg-white/10'
+                        ? 'text-bp-red bg-red-50 font-semibold'
+                        : 'text-gray-600 hover:text-bp-dark hover:bg-gray-100'
                     }`
                   }
                 >
@@ -91,34 +92,34 @@ export default function Layout({ children }) {
               ))}
             </nav>
 
-            {/* User selector */}
+            {/* Sélecteur utilisateur */}
             <div className="flex items-center gap-3">
               {currentUser ? (
                 <button
                   onClick={() => setShowPicker(true)}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 transition-colors px-3 py-1.5 rounded-lg"
+                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 transition-colors px-3 py-1.5 rounded-lg"
                 >
-                  <div className="w-7 h-7 rounded-full bg-gold-500 text-navy-900 flex items-center justify-center text-xs font-bold">
+                  <div className="w-7 h-7 rounded-full bg-bp-red text-white flex items-center justify-center text-xs font-bold">
                     {initials}
                   </div>
                   <div className="hidden sm:block text-left">
-                    <div className="text-xs text-navy-200 leading-none">Connecté·e</div>
-                    <div className="text-sm font-medium text-white leading-tight">{currentUser.nom}</div>
+                    <div className="text-xs text-gray-400 leading-none">Connecté·e</div>
+                    <div className="text-sm font-semibold text-bp-dark leading-tight">{currentUser.nom}</div>
                   </div>
                 </button>
               ) : (
                 <button
                   onClick={() => setShowPicker(true)}
-                  className="text-sm text-gold-400 hover:text-gold-300 font-medium"
+                  className="text-sm text-bp-red hover:text-red-700 font-semibold"
                 >
                   Qui suis-je ?
                 </button>
               )}
 
-              {/* Mobile menu toggle */}
+              {/* Burger mobile */}
               <button
                 onClick={() => setMobileOpen((v) => !v)}
-                className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
               >
                 <span className="text-xl">{mobileOpen ? '✕' : '☰'}</span>
               </button>
@@ -128,7 +129,7 @@ export default function Layout({ children }) {
 
         {/* Mobile nav */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-navy-800 bg-navy-950 px-4 pb-3">
+          <div className="md:hidden border-t border-gray-100 bg-white px-4 pb-3">
             {NAV_ITEMS.map(({ to, label, icon }) => (
               <NavLink
                 key={to}
@@ -137,8 +138,8 @@ export default function Layout({ children }) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 w-full px-3 py-2.5 mt-1 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-white/15 text-white'
-                      : 'text-navy-300 hover:text-white hover:bg-white/10'
+                      ? 'text-bp-red bg-red-50 font-semibold'
+                      : 'text-gray-600 hover:text-bp-dark hover:bg-gray-100'
                   }`
                 }
               >
@@ -150,17 +151,17 @@ export default function Layout({ children }) {
         )}
       </header>
 
-      {/* ── Main ──────────────────────────────────────────────────────── */}
+      {/* ── Main ───────────────────────────────────────────────────── */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
 
-      {/* ── Footer ────────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 py-4 text-center text-xs text-gray-400">
+      {/* ── Footer ─────────────────────────────────────────────────── */}
+      <footer className="border-t border-gray-200 bg-white py-4 text-center text-xs text-gray-400">
         TMT Helper Hub · BearingPoint · {new Date().getFullYear()}
       </footer>
 
-      {/* ── Modal "Qui êtes-vous ?" ────────────────────────────────────── */}
+      {/* ── Modal "Qui êtes-vous ?" ─────────────────────────────────── */}
       <Modal
         isOpen={showPicker}
         onClose={() => currentUser && setShowPicker(false)}
@@ -174,10 +175,7 @@ export default function Layout({ children }) {
               Aucun consultant trouvé. Commencez par configurer votre base de données
               et ajouter des membres dans l'onglet <strong>Équipe</strong>.
             </p>
-            <button
-              onClick={() => setShowPicker(false)}
-              className="mt-4 btn-primary"
-            >
+            <button onClick={() => setShowPicker(false)} className="mt-4 btn-primary">
               Continuer en tant qu'invité
             </button>
           </div>
@@ -196,13 +194,13 @@ export default function Layout({ children }) {
                     className={`
                       w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left
                       ${currentUser?.id === c.id
-                        ? 'border-navy-700 bg-navy-50'
-                        : 'border-gray-100 hover:border-navy-200 hover:bg-gray-50'}
+                        ? 'border-bp-red bg-red-50'
+                        : 'border-gray-100 hover:border-red-200 hover:bg-gray-50'}
                     `}
                   >
                     <div className={`
                       w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0
-                      ${currentUser?.id === c.id ? 'bg-navy-900 text-gold-400' : 'bg-navy-100 text-navy-700'}
+                      ${currentUser?.id === c.id ? 'bg-bp-red text-white' : 'bg-gray-100 text-gray-700'}
                     `}>
                       {ini}
                     </div>
@@ -211,12 +209,12 @@ export default function Layout({ children }) {
                       <div className="text-xs text-gray-500 flex items-center gap-1">
                         {c.grade}
                         {c.is_admin && (
-                          <span className="ml-1 badge bg-gold-100 text-gold-700">Admin</span>
+                          <span className="ml-1 badge bg-red-100 text-bp-red">Admin</span>
                         )}
                       </div>
                     </div>
                     {currentUser?.id === c.id && (
-                      <span className="text-navy-700 text-sm">✓</span>
+                      <span className="text-bp-red text-sm font-bold">✓</span>
                     )}
                   </button>
                 )
@@ -229,16 +227,17 @@ export default function Layout({ children }) {
   )
 }
 
-// Hook pour accéder à l'utilisateur courant depuis n'importe quel composant
 export function useCurrentUser() {
   const [user, setUser] = useState(null)
   useEffect(() => {
     const id = localStorage.getItem(STORAGE_KEY)
     if (!id) return
-    consultantsAPI.getAll().then((data) => {
-      const found = (data || []).find((c) => c.id === id)
-      if (found) setUser(found)
-    }).catch(() => {})
+    consultantsAPI.getAll()
+      .then((data) => {
+        const found = (data || []).find((c) => c.id === id)
+        if (found) setUser(found)
+      })
+      .catch(() => {})
   }, [])
   return user
 }
