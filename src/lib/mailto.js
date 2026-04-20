@@ -1,11 +1,17 @@
-// ── Utilitaire mailto ─────────────────────────────────────────────────────────
-// Construit un lien mailto:// ouvrant le client mail avec sujet + corps pré-remplis.
-// window.location.href = mailtoUrl   ← ne navigue pas, ouvre juste le client mail.
+// ── Utilitaire Outlook Web ────────────────────────────────────────────────────
+// Construit un lien Outlook Web (deeplink compose) ouvrant un nouvel onglet
+// avec le mail pré-rempli, sans dépendre du client mail configuré sur le PC.
+// Plusieurs destinataires séparés par des points-virgules dans le paramètre to.
 
-function buildMailto({ to, subject, body }) {
-  const toStr = Array.isArray(to) ? to.filter(Boolean).join(',') : (to || '')
+function buildOutlookUrl({ to, subject, body }) {
+  const toStr = Array.isArray(to) ? to.filter(Boolean).join(';') : (to || '')
   if (!toStr) return null
-  return `mailto:${toStr}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  const params = new URLSearchParams({
+    to: toStr,
+    subject,
+    body,
+  })
+  return `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`
 }
 
 // ── Email "Nouvelle demande" ─────────────────────────────────────────────────
@@ -20,21 +26,21 @@ export function mailtoNouvelleDemande({
     ``,
     `${demandeur} (${grade}) a besoin d'aide sur le sujet suivant :`,
     ``,
-    `📌 Titre : ${titre}`,
-    `📂 Catégorie : ${categorie}`,
-    `⏱ Effort estimé : ${heures_estimees}h`,
-    `📝 Description : ${description || 'Non précisée'}`,
+    `Titre : ${titre}`,
+    `Categorie : ${categorie}`,
+    `Effort estime : ${heures_estimees}h`,
+    `Description : ${description || 'Non precisee'}`,
     ``,
-    `👉 Pour accepter cette demande, cliquez ici :`,
+    `Pour accepter cette demande, cliquez ici :`,
     link,
     ``,
-    `👉 Pour refuser, ignorez simplement ce mail.`,
+    `Pour refuser, ignorez simplement ce mail.`,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT`,
+    `TMT Helper Hub - BearingPoint TMT`,
   ].join('\n')
 
-  return buildMailto({
+  return buildOutlookUrl({
     to,
     subject: `[TMT Helper Hub] Demande d'aide : ${titre}`,
     body,
@@ -51,22 +57,22 @@ export function mailtoAssignation({
   const body = [
     `Bonjour,`,
     ``,
-    `Vous avez été assigné·e à la demande d'aide suivante :`,
+    `Vous avez ete assigne(e) a la demande d'aide suivante :`,
     ``,
-    `📌 Titre : ${titre}`,
-    `📂 Catégorie : ${categorie}`,
-    `⏱ Effort estimé : ${heures_estimees}h`,
-    `📝 Description : ${description || 'Non précisée'}`,
-    `👤 Demandeur : ${demandeur} (${grade})`,
+    `Titre : ${titre}`,
+    `Categorie : ${categorie}`,
+    `Effort estime : ${heures_estimees}h`,
+    `Description : ${description || 'Non precisee'}`,
+    `Demandeur : ${demandeur} (${grade})`,
     ``,
-    `👉 Accéder à la demande :`,
+    `Acceder a la demande :`,
     link,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT`,
+    `TMT Helper Hub - BearingPoint TMT`,
   ].join('\n')
 
-  return buildMailto({
+  return buildOutlookUrl({
     to,
     subject: `[TMT Helper Hub] Demande d'aide : ${titre}`,
     body,
@@ -83,29 +89,29 @@ export function mailtoAcceptation({
   const body = [
     `Bonjour,`,
     ``,
-    `Bonne nouvelle ! ${helperNom} a accepté de vous aider pour :`,
+    `Bonne nouvelle ! ${helperNom} a accepte de vous aider pour :`,
     ``,
-    `📌 Titre : ${titre}`,
-    `📂 Catégorie : ${categorie}`,
-    `⏱ Effort estimé : ${heures_estimees}h`,
+    `Titre : ${titre}`,
+    `Categorie : ${categorie}`,
+    `Effort estime : ${heures_estimees}h`,
     ``,
-    `Prenez contact avec ${helperNom} pour convenir des modalités.`,
+    `Prenez contact avec ${helperNom} pour convenir des modalites.`,
     ``,
-    `👉 Voir sur TMT Helper Hub :`,
+    `Voir sur TMT Helper Hub :`,
     link,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT`,
+    `TMT Helper Hub - BearingPoint TMT`,
   ].join('\n')
 
-  return buildMailto({
+  return buildOutlookUrl({
     to,
-    subject: `[TMT Helper Hub] Votre demande "${titre}" a été acceptée`,
+    subject: `[TMT Helper Hub] Votre demande "${titre}" a ete acceptee`,
     body,
   })
 }
 
-// ── Ouvrir le client mail ────────────────────────────────────────────────────
+// ── Ouvrir Outlook Web dans un nouvel onglet ─────────────────────────────────
 export function openMailto(url) {
-  if (url) window.location.href = url
+  if (url) window.open(url, '_blank', 'noopener,noreferrer')
 }
