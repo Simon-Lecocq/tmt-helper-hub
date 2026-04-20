@@ -1,6 +1,5 @@
 const { getSupabase } = require('./utils/supabaseClient');
 const { respond, preflight } = require('./utils/cors');
-const { sendEmail, emailNouvelleDemande, emailDemandeAcceptee } = require('./utils/email');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return preflight();
@@ -31,7 +30,7 @@ exports.handler = async (event) => {
       return respond(200, data);
     }
 
-    // ── POST — créer une demande + envoyer emails ────────────────────────
+    // ── POST — créer une demande ──────────────────────────────────────────
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}');
       const { demandeur_id, titre, categorie, description, heures_estimees, consultants_notifies } = body;
@@ -53,35 +52,6 @@ exports.handler = async (event) => {
         .select(`*, demandeur:consultants!demandes_demandeur_id_fkey(id, nom, email)`)
         .single();
       if (demErr) throw demErr;
-
-      // Collecter les destinataires : notifiés + admins (dédupliqués)
-      const idsToNotify = new Set(consultants_notifies || []);
-      const { data: admins } = await supabase.from('consultants').select('id, email').eq('is_admin', true).eq('statut', 'actif');
-      (admins || []).forEach((a) => idsToNotify.add(a.id));
-
-      if (idsToNotify.size > 0) {
-        const { data: recipients } = await supabase
-          .from('consultants')
-          .select('email, nom')
-          .in('id', [...idsToNotify])
-          .neq('id', demandeur_id)
-          .eq('statut', 'actif');
-
-        const emails = (recipients || []).map((r) => r.email).filter(Boolean);
-        if (emails.length > 0) {
-          await sendEmail({
-            to: emails,
-            subject: `[TMT Helper Hub] Nouvelle demande d'aide : ${titre}`,
-            html: emailNouvelleDemande({
-              demandeur: demande.demandeur?.nom || 'Un collègue',
-              titre,
-              categorie,
-              description,
-              heures_estimees,
-            }),
-          });
-        }
-      }
 
       return respond(201, demande);
     }
@@ -105,8 +75,6 @@ exports.handler = async (event) => {
         const { helper_id } = body;
         if (!helper_id) return respond(400, { error: 'helper_id manquant.' });
 
-        const { data: helper } = await supabase.from('consultants').select('nom, email').eq('id', helper_id).single();
-
         const { data: updated, error: upErr } = await supabase
           .from('demandes')
           .update({ statut: 'en_cours', assigne_a: helper_id })
@@ -114,19 +82,6 @@ exports.handler = async (event) => {
           .select()
           .single();
         if (upErr) throw upErr;
-
-        // Email au demandeur
-        if (current.demandeur?.email) {
-          await sendEmail({
-            to: current.demandeur.email,
-            subject: `[TMT Helper Hub] Votre demande "${current.titre}" a été acceptée`,
-            html: emailDemandeAcceptee({
-              helperNom: helper?.nom || 'Un collègue',
-              titre: current.titre,
-              heures_estimees: current.heures_estimees,
-            }),
-          });
-        }
 
         return respond(200, updated);
       }
@@ -136,8 +91,6 @@ exports.handler = async (event) => {
         const { helper_id } = body;
         if (!helper_id) return respond(400, { error: 'helper_id manquant.' });
 
-        const { data: helper } = await supabase.from('consultants').select('nom, email').eq('id', helper_id).single();
-
         const { data: updated, error: upErr } = await supabase
           .from('demandes')
           .update({ statut: 'en_cours', assigne_a: helper_id })
@@ -145,18 +98,6 @@ exports.handler = async (event) => {
           .select()
           .single();
         if (upErr) throw upErr;
-
-        if (current.demandeur?.email) {
-          await sendEmail({
-            to: current.demandeur.email,
-            subject: `[TMT Helper Hub] Votre demande "${current.titre}" a été assignée`,
-            html: emailDemandeAcceptee({
-              helperNom: helper?.nom || 'Un collègue',
-              titre: current.titre,
-              heures_estimees: current.heures_estimees,
-            }),
-          });
-        }
 
         return respond(200, updated);
       }

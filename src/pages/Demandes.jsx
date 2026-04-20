@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useCurrentUser } from '../components/Layout'
 import { useToast } from '../contexts/ToastContext'
 import Modal from '../components/Modal'
 import { PageLoader, EmptyState } from '../components/LoadingSpinner'
 import { consultantsAPI, demandesAPI } from '../lib/api'
 import { getLevel } from './Dashboard'
+import { mailtoNouvelleDemande, mailtoAssignation, mailtoAcceptation, openMailto } from '../lib/mailto'
 
 const CATEGORIES = [
   'Slides / Présentation',
@@ -40,10 +42,12 @@ const CAT_COLORS = {
 export default function Demandes() {
   const currentUser = useCurrentUser()
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlHandled = useRef(false)
 
-  const [demandes, setDemandes]     = useState([])
-  const [consultants, setConsultants] = useState([])
-  const [loading, setLoading]       = useState(true)
+  const [demandes, setDemandes]         = useState([])
+  const [consultants, setConsultants]   = useState([])
+  const [loading, setLoading]           = useState(true)
 
   // Filtres
   const [filterCat,    setFilterCat]    = useState('')
@@ -58,16 +62,21 @@ export default function Demandes() {
   })
   const [formLoading, setFormLoading] = useState(false)
 
+  // Modale accept/refuse (depuis lien email)
+  const [showAccept, setShowAccept]   = useState(false)
+  const [acceptDemande, setAcceptDemande] = useState(null)
+  const [acceptLoading, setAcceptLoading] = useState(false)
+
   // Modale assignation admin
-  const [showAssign, setShowAssign] = useState(false)
+  const [showAssign, setShowAssign]       = useState(false)
   const [assignDemande, setAssignDemande] = useState(null)
   const [assignHelperID, setAssignHelperID] = useState('')
   const [assignLoading, setAssignLoading] = useState(false)
 
   // Modale complétion
-  const [showComplete, setShowComplete] = useState(false)
+  const [showComplete, setShowComplete]       = useState(false)
   const [completeDemande, setCompleteDemande] = useState(null)
-  const [completeHeures, setCompleteHeures] = useState(2)
+  const [completeHeures, setCompleteHeures]   = useState(2)
   const [completeLoading, setCompleteLoading] = useState(false)
 
   const loadData = useCallback(async () => {
@@ -92,6 +101,22 @@ export default function Demandes() {
     if (currentUser) setForm((f) => ({ ...f, demandeur_id: currentUser.id }))
   }, [currentUser])
 
+  // ── Gestion lien email ?demande=id&action=assign ──────────────────────
+  useEffect(() => {
+    if (urlHandled.current || loading || demandes.length === 0) return
+    const demandeId = searchParams.get('demande')
+    const action    = searchParams.get('action')
+    if (!demandeId || action !== 'assign') return
+
+    const d = demandes.find((d) => d.id === demandeId)
+    if (!d) return
+
+    urlHandled.current = true
+    setSearchParams({}) // nettoyer l'URL
+    setAcceptDemande(d)
+    setShowAccept(true)
+  }, [loading, demandes])
+
   // ── Créer ──────────────────────────────────────────────────────────────
   async function submitCreate(e) {
     e.preventDefault()
@@ -100,9 +125,30 @@ export default function Demandes() {
     if (!form.categorie)    return toast.error('La catégorie est obligatoire.')
     setFormLoading(true)
     try {
-      await demandesAPI.create(form)
-      toast.success('Demande créée ! Notifications envoyées.')
+      const demande = await demandesAPI.create(form)
+      toast.success('Demande créée !')
       setShowCreate(false)
+
+      // Mailto : notifiés + admins, hors demandeur
+      const notifyIds = new Set(form.consultants_notifies)
+      consultants.filter((c) => c.is_admin).forEach((c) => notifyIds.add(c.id))
+      const toEmails = consultants
+        .filter((c) => notifyIds.has(c.id) && c.id !== form.demandeur_id)
+        .map((c) => c.email).filter(Boolean)
+      if (toEmails.length > 0) {
+        const demandeur = consultants.find((c) => c.id === form.demandeur_id)
+        openMailto(mailtoNouvelleDemande({
+          to: toEmails,
+          demandeur: demandeur?.nom || '',
+          grade: demandeur?.grade || '',
+          titre: form.titre,
+          categorie: form.categorie,
+          heures_estimees: form.heures_estimees,
+          description: form.description,
+          demandeId: demande.id,
+        }))
+      }
+
       setForm({ titre: '', categorie: '', description: '', heures_estimees: 2, demandeur_id: currentUser?.id || '', consultants_notifies: [] })
       loadData()
     } catch (e) {
@@ -112,16 +158,31 @@ export default function Demandes() {
     }
   }
 
-  // ── Accepter ───────────────────────────────────────────────────────────
+  // ── Accepter (bouton direct ou depuis lien email) ──────────────────────
   async function accepter(demande) {
-    if (!currentUser) return toast.error('Sélectionnez votre profil d\'abord.')
+    if (!currentUser) return toast.error("Sélectionnez votre profil d'abord.")
     if (demande.demandeur_id === currentUser.id) return toast.error('Vous ne pouvez pas accepter votre propre demande.')
+    setAcceptLoading(true)
     try {
       await demandesAPI.accept(demande.id, currentUser.id)
-      toast.success('Demande acceptée ! Le demandeur a été notifié.')
+      toast.success('Demande acceptée ! Ouvrez le mail pour notifier le demandeur.')
+      setShowAccept(false)
       loadData()
+      // Mailto → demandeur
+      if (demande.demandeur?.email) {
+        openMailto(mailtoAcceptation({
+          to: demande.demandeur.email,
+          helperNom: currentUser.nom,
+          titre: demande.titre,
+          categorie: demande.categorie,
+          heures_estimees: demande.heures_estimees,
+          demandeId: demande.id,
+        }))
+      }
     } catch (e) {
       toast.error(e.message)
+    } finally {
+      setAcceptLoading(false)
     }
   }
 
@@ -132,9 +193,24 @@ export default function Demandes() {
     setAssignLoading(true)
     try {
       await demandesAPI.assign(assignDemande.id, assignHelperID)
-      toast.success('Demande assignée ! Le demandeur a été notifié.')
+      toast.success('Demande assignée !')
       setShowAssign(false)
       loadData()
+      // Mailto → helper assigné
+      const helper = consultants.find((c) => c.id === assignHelperID)
+      if (helper?.email) {
+        const demandeur = consultants.find((c) => c.id === assignDemande.demandeur_id) || assignDemande.demandeur
+        openMailto(mailtoAssignation({
+          to: helper.email,
+          demandeur: demandeur?.nom || '',
+          grade: demandeur?.grade || '',
+          titre: assignDemande.titre,
+          categorie: assignDemande.categorie,
+          heures_estimees: assignDemande.heures_estimees,
+          description: assignDemande.description,
+          demandeId: assignDemande.id,
+        }))
+      }
     } catch (e) {
       toast.error(e.message)
     } finally {
@@ -226,6 +302,42 @@ export default function Demandes() {
           ))}
         </div>
       )}
+
+      {/* ── Modal : Accept / Refuse depuis lien email ─────────────────── */}
+      <Modal isOpen={showAccept} onClose={() => setShowAccept(false)} title="📩 Demande d'aide" size="sm">
+        {acceptDemande && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              <strong>{acceptDemande.demandeur?.nom}</strong> ({acceptDemande.demandeur?.grade}) a besoin d'aide :
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+              <div><strong>📌 Titre :</strong> {acceptDemande.titre}</div>
+              <div><strong>📂 Catégorie :</strong> {acceptDemande.categorie}</div>
+              <div><strong>⏱ Effort :</strong> {acceptDemande.heures_estimees}h estimées</div>
+              {acceptDemande.description && (
+                <div><strong>📝 Description :</strong> {acceptDemande.description}</div>
+              )}
+            </div>
+            {!currentUser && (
+              <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
+                ⚠️ Sélectionnez votre profil (en haut) avant d'accepter.
+              </p>
+            )}
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowAccept(false)} className="btn-secondary">
+                ✕ Refuser
+              </button>
+              <button
+                onClick={() => accepter(acceptDemande)}
+                disabled={acceptLoading || !currentUser || acceptDemande.demandeur_id === currentUser?.id}
+                className="btn-success"
+              >
+                {acceptLoading ? 'Acceptation…' : '🙋 Accepter la demande'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* ── Modal : Créer demande ──────────────────────────────────────── */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="+ Nouvelle demande d'aide" size="lg">
@@ -352,8 +464,12 @@ export default function Demandes() {
 function DemandeCard({ demande: d, currentUser, isAdmin, onAccept, onAssign, onComplete }) {
   const sc = STATUT_CONFIG[d.statut] || STATUT_CONFIG.ouverte
   const catColor = CAT_COLORS[d.categorie] || CAT_COLORS['Autre']
+
+  // Permissions
   const canAccept   = d.statut === 'ouverte' && currentUser && d.demandeur_id !== currentUser.id
-  const canComplete = d.statut === 'en_cours' && d.assigne_a === currentUser?.id
+  const canComplete = d.statut === 'en_cours' && currentUser && (
+    d.assigne_a === currentUser.id || isAdmin || d.demandeur_id === currentUser.id
+  )
   const canAssign   = (d.statut === 'ouverte' || d.statut === 'en_cours') && isAdmin
 
   const dateStr = d.created_at
@@ -407,6 +523,16 @@ function DemandeCard({ demande: d, currentUser, isAdmin, onAccept, onAssign, onC
           )}
           {canComplete && (
             <button onClick={onComplete} className="btn-primary text-xs px-3 py-1.5">
+              🏁 Terminer
+            </button>
+          )}
+          {/* Bouton grisé : demande en cours mais non autorisé à compléter */}
+          {d.statut === 'en_cours' && currentUser && !canComplete && !isAdmin && (
+            <button
+              disabled
+              title="Seuls le demandeur, l'assigné ou un admin peuvent marquer comme complétée"
+              className="btn-primary text-xs px-3 py-1.5 opacity-30 cursor-not-allowed"
+            >
               🏁 Terminer
             </button>
           )}

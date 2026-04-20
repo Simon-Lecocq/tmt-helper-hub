@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext'
 import Modal from '../components/Modal'
 import { PageLoader, EmptyState } from '../components/LoadingSpinner'
 import { consultantsAPI, demandesAPI, disponibilitesAPI } from '../lib/api'
+import { mailtoNouvelleDemande, openMailto } from '../lib/mailto'
 
 const CATEGORIES = [
   'Slides / Présentation',
@@ -101,9 +102,30 @@ export default function Dashboard() {
     if (!demForm.categorie)    return toast.error('La catégorie est obligatoire.')
     setDemLoading(true)
     try {
-      await demandesAPI.create(demForm)
-      toast.success('Demande postée ! Notifications envoyées.')
+      const demande = await demandesAPI.create(demForm)
+      toast.success('Demande postée !')
       setShowDemModal(false)
+
+      // Collecter destinataires : consultants_notifies + admins, dédupliqués, hors demandeur
+      const notifyIds = new Set(demForm.consultants_notifies)
+      consultants.filter((c) => c.is_admin).forEach((c) => notifyIds.add(c.id))
+      const toEmails = consultants
+        .filter((c) => notifyIds.has(c.id) && c.id !== demForm.demandeur_id)
+        .map((c) => c.email).filter(Boolean)
+      if (toEmails.length > 0) {
+        const demandeur = consultants.find((c) => c.id === demForm.demandeur_id)
+        openMailto(mailtoNouvelleDemande({
+          to: toEmails,
+          demandeur: demandeur?.nom || '',
+          grade: demandeur?.grade || '',
+          titre: demForm.titre,
+          categorie: demForm.categorie,
+          heures_estimees: demForm.heures_estimees,
+          description: demForm.description,
+          demandeId: demande.id,
+        }))
+      }
+
       setDemForm({ titre: '', categorie: '', description: '', heures_estimees: 2, demandeur_id: currentUser?.id || '', consultants_notifies: [] })
       loadData()
     } catch (e) {
