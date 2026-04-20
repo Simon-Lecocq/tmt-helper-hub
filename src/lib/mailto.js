@@ -21,11 +21,8 @@ function buildOutlookUrl({ to, subject, body }) {
 
 // ── Email "Nouvelle demande" ─────────────────────────────────────────────────
 export function mailtoNouvelleDemande({
-  to, demandeur, grade, titre, categorie, heures_estimees, description, demandeId,
+  to, demandeur, grade, titre, categorie, heures_estimees, description,
 }) {
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const link = `${appUrl}/demandes?demande=${demandeId}&action=assign`
-
   const body = [
     `Bonjour,`,
     ``,
@@ -36,7 +33,7 @@ export function mailtoNouvelleDemande({
     `⏱️ Effort estimé : ${heures_estimees}h`,
     `📝 Description : ${description || 'Non précisée'}`,
     ``,
-    `👉 Pour accepter cette demande, cliquez sur ce lien : <${link}>`,
+    `👉 Pour accepter ou refuser, connectez-vous à TMT Helper Hub et recherchez cette demande.`,
     ``,
     `Si vous avez des questions, contactez directement ${demandeur}.`,
     ``,
@@ -53,11 +50,8 @@ export function mailtoNouvelleDemande({
 
 // ── Email "Assignation" (admin assigne un helper) ────────────────────────────
 export function mailtoAssignation({
-  to, demandeur, grade, titre, categorie, heures_estimees, description, demandeId,
+  to, demandeur, grade, titre, categorie, heures_estimees, description,
 }) {
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const link = `${appUrl}/demandes?demande=${demandeId}&action=assign`
-
   const body = [
     `Bonjour,`,
     ``,
@@ -69,9 +63,7 @@ export function mailtoAssignation({
     `📝 Description : ${description || 'Non précisée'}`,
     `👤 Demandeur : ${demandeur} (${grade})`,
     ``,
-    `👉 Accéder à la demande : <${link}>`,
-    ``,
-    `Si vous avez des questions, contactez directement ${demandeur}.`,
+    `👉 Connectez-vous à TMT Helper Hub pour accéder à cette demande et convenir des modalités avec ${demandeur}.`,
     ``,
     `Cordialement,`,
     `TMT Helper Hub — BearingPoint TMT 🔵`,
@@ -86,11 +78,8 @@ export function mailtoAssignation({
 
 // ── Email "Acceptation" (helper notifie le demandeur) ───────────────────────
 export function mailtoAcceptation({
-  to, helperNom, titre, categorie, heures_estimees, demandeId,
+  to, helperNom, titre, categorie, heures_estimees,
 }) {
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  const link = `${appUrl}/demandes`
-
   const body = [
     `Bonjour,`,
     ``,
@@ -101,8 +90,6 @@ export function mailtoAcceptation({
     `⏱️ Effort estimé : ${heures_estimees}h`,
     ``,
     `Prenez contact avec ${helperNom} pour convenir des modalités.`,
-    ``,
-    `👉 Voir sur TMT Helper Hub : <${link}>`,
     ``,
     `Cordialement,`,
     `TMT Helper Hub — BearingPoint TMT 🔵`,
