@@ -1,17 +1,22 @@
 // ── Utilitaire Outlook Web ────────────────────────────────────────────────────
 // Construit un lien Outlook Web (deeplink compose) ouvrant un nouvel onglet
 // avec le mail pré-rempli, sans dépendre du client mail configuré sur le PC.
-// Plusieurs destinataires séparés par des points-virgules dans le paramètre to.
+//
+// ⚠️  Ne pas utiliser URLSearchParams : il encode les espaces en "+" et les
+//     sauts de ligne de façon non standard, ce qui rend le corps illisible.
+//     On encode chaque paramètre avec encodeURIComponent et on concatène manuellement.
+//
+// Plusieurs destinataires séparés par des points-virgules dans le param "to".
 
 function buildOutlookUrl({ to, subject, body }) {
   const toStr = Array.isArray(to) ? to.filter(Boolean).join(';') : (to || '')
   if (!toStr) return null
-  const params = new URLSearchParams({
-    to: toStr,
-    subject,
-    body,
-  })
-  return `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`
+  return (
+    `https://outlook.office.com/mail/deeplink/compose` +
+    `?to=${encodeURIComponent(toStr)}` +
+    `&subject=${encodeURIComponent(subject)}` +
+    `&body=${encodeURIComponent(body)}`
+  )
 }
 
 // ── Email "Nouvelle demande" ─────────────────────────────────────────────────
@@ -26,18 +31,18 @@ export function mailtoNouvelleDemande({
     ``,
     `${demandeur} (${grade}) a besoin d'aide sur le sujet suivant :`,
     ``,
-    `Titre : ${titre}`,
-    `Categorie : ${categorie}`,
-    `Effort estime : ${heures_estimees}h`,
-    `Description : ${description || 'Non precisee'}`,
+    `📌 Titre : ${titre}`,
+    `📂 Catégorie : ${categorie}`,
+    `⏱️ Effort estimé : ${heures_estimees}h`,
+    `📝 Description : ${description || 'Non précisée'}`,
     ``,
-    `Pour accepter cette demande, cliquez ici :`,
+    `👉 Pour accepter cette demande, cliquez sur ce lien :`,
     link,
     ``,
-    `Pour refuser, ignorez simplement ce mail.`,
+    `Si vous avez des questions, contactez directement ${demandeur}.`,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub - BearingPoint TMT`,
+    `TMT Helper Hub — BearingPoint TMT 🔵`,
   ].join('\n')
 
   return buildOutlookUrl({
@@ -57,19 +62,21 @@ export function mailtoAssignation({
   const body = [
     `Bonjour,`,
     ``,
-    `Vous avez ete assigne(e) a la demande d'aide suivante :`,
+    `Vous avez été assigné·e à la demande d'aide suivante :`,
     ``,
-    `Titre : ${titre}`,
-    `Categorie : ${categorie}`,
-    `Effort estime : ${heures_estimees}h`,
-    `Description : ${description || 'Non precisee'}`,
-    `Demandeur : ${demandeur} (${grade})`,
+    `📌 Titre : ${titre}`,
+    `📂 Catégorie : ${categorie}`,
+    `⏱️ Effort estimé : ${heures_estimees}h`,
+    `📝 Description : ${description || 'Non précisée'}`,
+    `👤 Demandeur : ${demandeur} (${grade})`,
     ``,
-    `Acceder a la demande :`,
+    `👉 Accéder à la demande :`,
     link,
     ``,
+    `Si vous avez des questions, contactez directement ${demandeur}.`,
+    ``,
     `Cordialement,`,
-    `TMT Helper Hub - BearingPoint TMT`,
+    `TMT Helper Hub — BearingPoint TMT 🔵`,
   ].join('\n')
 
   return buildOutlookUrl({
@@ -89,24 +96,24 @@ export function mailtoAcceptation({
   const body = [
     `Bonjour,`,
     ``,
-    `Bonne nouvelle ! ${helperNom} a accepte de vous aider pour :`,
+    `Bonne nouvelle ! ${helperNom} a accepté de vous aider pour :`,
     ``,
-    `Titre : ${titre}`,
-    `Categorie : ${categorie}`,
-    `Effort estime : ${heures_estimees}h`,
+    `📌 Titre : ${titre}`,
+    `📂 Catégorie : ${categorie}`,
+    `⏱️ Effort estimé : ${heures_estimees}h`,
     ``,
-    `Prenez contact avec ${helperNom} pour convenir des modalites.`,
+    `Prenez contact avec ${helperNom} pour convenir des modalités.`,
     ``,
-    `Voir sur TMT Helper Hub :`,
+    `👉 Voir sur TMT Helper Hub :`,
     link,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub - BearingPoint TMT`,
+    `TMT Helper Hub — BearingPoint TMT 🔵`,
   ].join('\n')
 
   return buildOutlookUrl({
     to,
-    subject: `[TMT Helper Hub] Votre demande "${titre}" a ete acceptee`,
+    subject: `[TMT Helper Hub] Votre demande "${titre}" a été acceptée`,
     body,
   })
 }
