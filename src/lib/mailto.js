@@ -1,7 +1,8 @@
 // ── Utilitaire Outlook Web ────────────────────────────────────────────────────
-// Outlook Web deeplink compose accepte du HTML dans le paramètre body,
-// ce qui permet des liens cliquables avec texte personnalisé (<a href>).
-// Sauts de ligne : <br> en HTML. Encodage : encodeURIComponent sur le body complet.
+// Outlook Web deeplink compose n'interprète pas le HTML dans le paramètre body —
+// il l'affiche en texte brut. Solution retenue : URL seule sur sa propre ligne,
+// entourée de lignes vides. Outlook (et la plupart des clients mail) détecte
+// automatiquement les URLs isolées et les rend cliquables.
 
 function buildOutlookUrl({ to, subject, body }) {
   const toStr = Array.isArray(to) ? to.filter(Boolean).join(';') : (to || '')
@@ -14,14 +15,6 @@ function buildOutlookUrl({ to, subject, body }) {
   )
 }
 
-function a(href, text) {
-  return `<a href="${href}">${text}</a>`
-}
-
-function br(n = 1) {
-  return '<br>'.repeat(n)
-}
-
 // ── Email "Nouvelle demande" ─────────────────────────────────────────────────
 export function mailtoNouvelleDemande({
   to, demandeur, grade, titre, categorie, heures_estimees, description, demandeId,
@@ -31,21 +24,23 @@ export function mailtoNouvelleDemande({
 
   const body = [
     `Bonjour,`,
-    br(),
+    ``,
     `${demandeur} (${grade}) a besoin d'aide sur le sujet suivant :`,
-    br(),
+    ``,
     `📌 Titre : ${titre}`,
     `📂 Catégorie : ${categorie}`,
     `⏱️ Effort estimé : ${heures_estimees}h`,
     `📝 Description : ${description || 'Non précisée'}`,
-    br(),
-    `👉 ${a(link, 'Accepter cette demande sur TMT Helper Hub')}`,
-    br(),
+    ``,
+    `👉 Pour accepter cette demande, cliquez sur le lien ci-dessous :`,
+    ``,
+    link,
+    ``,
     `Si vous ne souhaitez pas aider, ignorez simplement ce mail.`,
-    br(),
+    ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT 🔵`,
-  ].join('<br>')
+    `TMT Helper Hub — BearingPoint TMT`,
+  ].join('\n')
 
   return buildOutlookUrl({
     to,
@@ -63,20 +58,22 @@ export function mailtoAssignation({
 
   const body = [
     `Bonjour,`,
-    br(),
+    ``,
     `Vous avez été assigné·e à la demande d'aide suivante :`,
-    br(),
+    ``,
     `📌 Titre : ${titre}`,
     `📂 Catégorie : ${categorie}`,
     `⏱️ Effort estimé : ${heures_estimees}h`,
     `📝 Description : ${description || 'Non précisée'}`,
     `👤 Demandeur : ${demandeur} (${grade})`,
-    br(),
-    `👉 ${a(link, 'Accéder à la demande sur TMT Helper Hub')}`,
-    br(),
+    ``,
+    `👉 Accéder à la demande :`,
+    ``,
+    link,
+    ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT 🔵`,
-  ].join('<br>')
+    `TMT Helper Hub — BearingPoint TMT`,
+  ].join('\n')
 
   return buildOutlookUrl({
     to,
@@ -94,20 +91,22 @@ export function mailtoAcceptation({
 
   const body = [
     `Bonjour,`,
-    br(),
+    ``,
     `Bonne nouvelle ! ${helperNom} a accepté de vous aider pour :`,
-    br(),
+    ``,
     `📌 Titre : ${titre}`,
     `📂 Catégorie : ${categorie}`,
     `⏱️ Effort estimé : ${heures_estimees}h`,
-    br(),
+    ``,
     `Prenez contact avec ${helperNom} pour convenir des modalités.`,
-    br(),
-    `👉 ${a(link, 'Voir toutes les demandes sur TMT Helper Hub')}`,
-    br(),
+    ``,
+    `👉 Voir toutes les demandes :`,
+    ``,
+    link,
+    ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT 🔵`,
-  ].join('<br>')
+    `TMT Helper Hub — BearingPoint TMT`,
+  ].join('\n')
 
   return buildOutlookUrl({
     to,
