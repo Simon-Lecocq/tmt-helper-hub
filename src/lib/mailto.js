@@ -1,21 +1,21 @@
-// ── Utilitaire Outlook Web ────────────────────────────────────────────────────
-// Règle critique : on encode le body EN ENTIER avec encodeURIComponent.
-// Outlook Web décode le paramètre body avant de l'afficher — l'URL dans le body
-// est donc restituée intacte (https://...) et auto-détectée comme lien cliquable.
-// On remplace ensuite %0A par %0D%0A (CRLF) pour des sauts de ligne corrects.
+// ── Utilitaire mailto (Outlook desktop) ──────────────────────────────────────
+// Ouvre Outlook desktop via window.location.href = mailto:...
+// Corps encodé avec encodeURIComponent par ligne, joints par %0A.
+// Outlook desktop détecte automatiquement les URLs sur leur propre ligne
+// et les rend bleues et cliquables.
 
-function buildOutlookUrl({ to, subject, body }) {
+function buildMailto({ to, subject, body }) {
   const toStr = Array.isArray(to) ? to.filter(Boolean).join(';') : (to || '')
   if (!toStr) return null
 
-  const encodedBody = encodeURIComponent(body).replace(/%0A/g, '%0D%0A')
+  // Encode chaque ligne séparément, joint par %0A
+  // → les URLs restent intactes après décodage par Outlook
+  const encodedBody = body
+    .split('\n')
+    .map((line) => encodeURIComponent(line))
+    .join('%0A')
 
-  return (
-    `https://outlook.office.com/mail/deeplink/compose` +
-    `?to=${encodeURIComponent(toStr)}` +
-    `&subject=${encodeURIComponent(subject)}` +
-    `&body=${encodedBody}`
-  )
+  return `mailto:${toStr}?subject=${encodeURIComponent(subject)}&body=${encodedBody}`
 }
 
 // ── Email "Nouvelle demande" ─────────────────────────────────────────────────
@@ -35,17 +35,16 @@ export function mailtoNouvelleDemande({
     `⏱️ Effort estimé : ${heures_estimees}h`,
     `📝 Description : ${description || 'Non précisée'}`,
     ``,
-    `👉 Pour accepter cette demande, cliquez sur le lien ci-dessous :`,
-    ``,
+    `👉 Pour accéder à la demande, copiez ce lien dans votre navigateur :`,
     link,
     ``,
     `Si vous ne souhaitez pas aider, ignorez simplement ce mail.`,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT`,
+    `TMT Helper Hub — BearingPoint TMT 🔵`,
   ].join('\n')
 
-  return buildOutlookUrl({
+  return buildMailto({
     to,
     subject: `[TMT Helper Hub] Demande d'aide : ${titre}`,
     body,
@@ -70,15 +69,14 @@ export function mailtoAssignation({
     `📝 Description : ${description || 'Non précisée'}`,
     `👤 Demandeur : ${demandeur} (${grade})`,
     ``,
-    `👉 Accéder à la demande :`,
-    ``,
+    `👉 Pour accéder à la demande, copiez ce lien dans votre navigateur :`,
     link,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT`,
+    `TMT Helper Hub — BearingPoint TMT 🔵`,
   ].join('\n')
 
-  return buildOutlookUrl({
+  return buildMailto({
     to,
     subject: `[TMT Helper Hub] Demande d'aide : ${titre}`,
     body,
@@ -104,21 +102,20 @@ export function mailtoAcceptation({
     `Prenez contact avec ${helperNom} pour convenir des modalités.`,
     ``,
     `👉 Voir toutes les demandes :`,
-    ``,
     link,
     ``,
     `Cordialement,`,
-    `TMT Helper Hub — BearingPoint TMT`,
+    `TMT Helper Hub — BearingPoint TMT 🔵`,
   ].join('\n')
 
-  return buildOutlookUrl({
+  return buildMailto({
     to,
     subject: `[TMT Helper Hub] Votre demande "${titre}" a été acceptée`,
     body,
   })
 }
 
-// ── Ouvrir Outlook Web dans un nouvel onglet ─────────────────────────────────
+// ── Ouvrir Outlook desktop via mailto ────────────────────────────────────────
 export function openMailto(url) {
-  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+  if (url) window.location.href = url
 }
