@@ -70,6 +70,30 @@ exports.handler = async (event) => {
         .single();
       if (fetchErr) throw fetchErr;
 
+      // ── action = refuse ──────────────────────────────────────────────
+      if (action === 'refuse') {
+        const { consultant_id, consultant_nom, commentaire } = body;
+        if (!consultant_id) return respond(400, { error: 'consultant_id manquant.' });
+
+        const existingRefus = current.refus || [];
+        const newEntry = {
+          consultant_id,
+          consultant_nom: consultant_nom || '',
+          commentaire:    commentaire    || '',
+          created_at: new Date().toISOString(),
+        };
+
+        const { data: updated, error: upErr } = await supabase
+          .from('demandes')
+          .update({ refus: [...existingRefus, newEntry] })
+          .eq('id', id)
+          .select()
+          .single();
+        if (upErr) throw upErr;
+
+        return respond(200, updated);
+      }
+
       // ── action = accept ──────────────────────────────────────────────
       if (action === 'accept') {
         const { helper_id } = body;

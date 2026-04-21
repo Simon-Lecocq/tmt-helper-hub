@@ -62,10 +62,13 @@ export default function Demandes() {
   })
   const [formLoading, setFormLoading] = useState(false)
 
-  // Modale accept/refuse (depuis lien email)
-  const [showAccept, setShowAccept]   = useState(false)
+  // Modale accept/refuse (depuis lien email ou bouton)
+  const [showAccept, setShowAccept]       = useState(false)
   const [acceptDemande, setAcceptDemande] = useState(null)
   const [acceptLoading, setAcceptLoading] = useState(false)
+  const [showRefuseForm, setShowRefuseForm] = useState(false)
+  const [refuseComment, setRefuseComment]   = useState('')
+  const [refuseLoading, setRefuseLoading]   = useState(false)
 
   // Modale assignation admin
   const [showAssign, setShowAssign]       = useState(false)
@@ -117,6 +120,31 @@ export default function Demandes() {
     setShowAccept(true)
   }, [loading, demandes])
 
+  function closeAcceptModal() {
+    setShowAccept(false)
+    setShowRefuseForm(false)
+    setRefuseComment('')
+  }
+
+  async function refuser(demande) {
+    if (!currentUser) return toast.error("Sélectionnez votre profil d'abord.")
+    setRefuseLoading(true)
+    try {
+      await demandesAPI.refuse(demande.id, {
+        consultant_id:  currentUser.id,
+        consultant_nom: currentUser.nom,
+        commentaire:    refuseComment,
+      })
+      toast.success('Refus enregistré.')
+      closeAcceptModal()
+      loadData()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setRefuseLoading(false)
+    }
+  }
+
   // ── Créer ──────────────────────────────────────────────────────────────
   async function submitCreate(e) {
     e.preventDefault()
@@ -166,7 +194,7 @@ export default function Demandes() {
     try {
       await demandesAPI.accept(demande.id, currentUser.id)
       toast.success('Demande acceptée ! Ouvrez le mail pour notifier le demandeur.')
-      setShowAccept(false)
+      closeAcceptModal()
       loadData()
       // Mailto → demandeur
       if (demande.demandeur?.email) {
@@ -303,8 +331,8 @@ export default function Demandes() {
         </div>
       )}
 
-      {/* ── Modal : Accept / Refuse depuis lien email ─────────────────── */}
-      <Modal isOpen={showAccept} onClose={() => setShowAccept(false)} title="📩 Demande d'aide" size="sm">
+      {/* ── Modal : Accept / Refuse ───────────────────────────────────── */}
+      <Modal isOpen={showAccept} onClose={closeAcceptModal} title="📩 Demande d'aide" size="sm">
         {acceptDemande && (
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
@@ -318,23 +346,61 @@ export default function Demandes() {
                 <div><strong>📝 Description :</strong> {acceptDemande.description}</div>
               )}
             </div>
+
             {!currentUser && (
               <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
-                ⚠️ Sélectionnez votre profil (en haut) avant d'accepter.
+                ⚠️ Sélectionnez votre profil (en haut) avant de répondre.
               </p>
             )}
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setShowAccept(false)} className="btn-secondary">
-                ✕ Refuser
-              </button>
-              <button
-                onClick={() => accepter(acceptDemande)}
-                disabled={acceptLoading || !currentUser || acceptDemande.demandeur_id === currentUser?.id}
-                className="btn-success"
-              >
-                {acceptLoading ? 'Acceptation…' : '🙋 Accepter la demande'}
-              </button>
-            </div>
+
+            {/* Formulaire de refus (affiché au clic sur Refuser) */}
+            {showRefuseForm ? (
+              <div className="space-y-3">
+                <div className="border-t border-gray-100 pt-3">
+                  <label className="label">Motif du refus <span className="text-gray-400 font-normal">(optionnel)</span></label>
+                  <textarea
+                    className="input resize-none"
+                    rows={3}
+                    placeholder="Ex : Je suis surchargé cette semaine, pas disponible avant vendredi…"
+                    value={refuseComment}
+                    onChange={(e) => setRefuseComment(e.target.value)}
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Visible uniquement par le demandeur et les administrateurs.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button onClick={() => setShowRefuseForm(false)} className="btn-secondary text-sm">
+                    ← Retour
+                  </button>
+                  <button
+                    onClick={() => refuser(acceptDemande)}
+                    disabled={refuseLoading || !currentUser}
+                    className="btn-danger text-sm"
+                  >
+                    {refuseLoading ? 'Envoi…' : '🚫 Confirmer le refus'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowRefuseForm(true)}
+                  disabled={!currentUser}
+                  className="btn-secondary"
+                >
+                  🚫 Refuser
+                </button>
+                <button
+                  onClick={() => accepter(acceptDemande)}
+                  disabled={acceptLoading || !currentUser || acceptDemande.demandeur_id === currentUser?.id}
+                  className="btn-success"
+                >
+                  {acceptLoading ? 'Acceptation…' : '🙋 Accepter'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -507,6 +573,24 @@ function DemandeCard({ demande: d, currentUser, isAdmin, onAccept, onAssign, onC
               <span>✅ Complétée le {new Date(d.completed_at).toLocaleDateString('fr-FR')}</span>
             )}
           </div>
+
+          {/* Refus — visible uniquement admin et demandeur */}
+          {d.refus?.length > 0 && (isAdmin || currentUser?.id === d.demandeur_id) && (
+            <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
+              <p className="text-xs font-medium text-gray-400">
+                🚫 {d.refus.length} refus enregistré{d.refus.length > 1 ? 's' : ''}
+              </p>
+              {d.refus.map((r, i) => (
+                <div key={i} className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-1.5">
+                  <span className="font-medium text-gray-700">{r.consultant_nom}</span>
+                  {r.commentaire
+                    ? <span> — {r.commentaire}</span>
+                    : <span className="italic text-gray-400"> — sans commentaire</span>
+                  }
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Actions */}

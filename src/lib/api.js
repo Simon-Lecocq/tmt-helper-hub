@@ -32,6 +32,8 @@ export const demandesAPI = {
   create: (data) => req('/demandes', { method: 'POST', body: data }),
   accept: (id, helper_id) =>
     req(`/demandes?id=${id}&action=accept`, { method: 'PUT', body: { helper_id } }),
+  refuse: (id, data) =>
+    req(`/demandes?id=${id}&action=refuse`, { method: 'PUT', body: data }),
   assign: (id, helper_id) =>
     req(`/demandes?id=${id}&action=assign`, { method: 'PUT', body: { helper_id } }),
   complete: (id, heures_creditees) =>
