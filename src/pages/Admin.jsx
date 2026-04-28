@@ -60,7 +60,15 @@ export default function Admin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pinInput }),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setPinError('Erreur serveur (' + res.status + '). Vérifiez la configuration.')
+        return
+      }
+      if (json.misconfigured) {
+        setPinError('Variable ADMIN_PIN absente — ajoutez-la dans les variables d\'environnement Netlify.')
+        return
+      }
       if (json.valid) {
         setPinVerified(true)
         setShowPinModal(false)

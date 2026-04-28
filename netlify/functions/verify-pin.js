@@ -10,8 +10,10 @@ exports.handler = async (event) => {
   const ADMIN_PIN = process.env.ADMIN_PIN;
   if (!ADMIN_PIN) {
     console.error('[verify-pin] Variable ADMIN_PIN non définie côté serveur.');
-    return respond(500, { error: 'Configuration serveur manquante.' });
+    // Retourner 200 avec misconfigured pour que le frontend puisse afficher
+    // un message clair plutôt que de tomber dans le catch ou le else générique.
+    return respond(200, { valid: false, misconfigured: true });
   }
 
-  return respond(200, { valid: String(pin) === String(ADMIN_PIN) });
+  return respond(200, { valid: String(pin).trim() === String(ADMIN_PIN).trim() });
 };
