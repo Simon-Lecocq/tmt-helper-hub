@@ -23,11 +23,12 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ position: 'fixed', inset: 0, zIndex: 9999 }}
+      className="flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" />
+      {/* Backdrop — couvre toute la page navbar incluse */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} className="bg-black/50 backdrop-blur-sm animate-fade-in" />
 
       {/* Panel */}
       <div
