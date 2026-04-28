@@ -18,7 +18,6 @@ const GRADE_COLORS = {
 
 const EMPTY_FORM = { nom: '', email: '', grade: 'Consultant' }
 
-const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '2810'
 
 export default function Admin() {
   const currentUser = useCurrentUser()
@@ -51,18 +50,30 @@ export default function Admin() {
     setShowPinModal(true)
   }
 
-  function submitPin(e) {
+  async function submitPin(e) {
     e.preventDefault()
-    if (pinInput === String(ADMIN_PIN)) {
-      setPinVerified(true)
-      setShowPinModal(false)
-      if (pinTimerRef.current) clearTimeout(pinTimerRef.current)
-      pinTimerRef.current = setTimeout(() => {
-        setPinVerified(false)
-        toast.info('Session admin expirée (10 min).')
-      }, 10 * 60 * 1000)
-    } else {
-      setPinError('Code PIN incorrect.')
+    if (!pinInput) return
+    setPinError('')
+    try {
+      const res = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinInput }),
+      })
+      const json = await res.json()
+      if (json.valid) {
+        setPinVerified(true)
+        setShowPinModal(false)
+        if (pinTimerRef.current) clearTimeout(pinTimerRef.current)
+        pinTimerRef.current = setTimeout(() => {
+          setPinVerified(false)
+          toast.info('Session admin expirée (10 min).')
+        }, 10 * 60 * 1000)
+      } else {
+        setPinError('Code PIN incorrect.')
+      }
+    } catch {
+      setPinError('Erreur de connexion au serveur.')
     }
   }
 
